@@ -9,5 +9,18 @@ export class Products{
     productName:string
 
     @Column()
+    specification:string
+
+    @Column()
+     unit:string
+     
+
+     @Column()
+     qty:number
+
+     @Column()
+     catagory:string
+     
+    @Column()
      price:number
 }

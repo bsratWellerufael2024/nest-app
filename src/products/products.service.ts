@@ -10,9 +10,11 @@ export class ProductsService {
     private repository: Repository<Products>,
   ) {}
    
-  async createProduct(productId:number,productName:string,price:number):Promise<Products>{
-      const newProduct= await this.repository.create({productId,productName,price})
-      return  this.repository.save(newProduct)
+  async createProduct(productId:number,productName:string,price:number,specification:string,qty:number,unit:string,catagory:string):Promise<Products>{
+      const newProduct= await this.repository.create({productId,productName,price,specification,qty,unit,catagory})
+      const totalPrice=price*qty
+      console.log(totalPrice);
+      return this.repository.save(newProduct)
   }
 
   getAllProducts():Promise<Products[]>{

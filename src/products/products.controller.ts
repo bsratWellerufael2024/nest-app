@@ -19,7 +19,11 @@ export class ProductsController {
           return this.productService.createProduct(
             productDto.productId,
             productDto.productName,
-            productDto.price
+            productDto.price,
+            productDto.specification,
+            productDto.qty,
+            productDto.unit,
+            productDto.catagory
           )
     }
 

@@ -8,7 +8,19 @@ export class ProductDto{
     @Length(4)
     productName:string
 
+    @IsString()
+    specification:string
+
+    @IsString()
+    unit:string
+
+    @IsNumber()
+    qty:number
+
+    catagory:string
+
     @IsNumber()
     price:number
+    
 
 }
