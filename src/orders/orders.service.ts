@@ -29,4 +29,5 @@ export class OrdersService {
   filteredProducts(isStocked:boolean){
       return this.orders.filter(inStock=>inStock.stocked===isStocked)
   }
+  
 }

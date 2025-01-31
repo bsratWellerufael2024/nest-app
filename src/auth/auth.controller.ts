@@ -3,15 +3,22 @@ import { AuthService } from './auth.service';
 
 import { ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { CreateUserDTO } from 'src/users/create-user.dto';
-
+import { HttpException,HttpStatus } from '@nestjs/common';
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
   
   @Post('login')
-  signIn(@Body() payload: Record<string, any>) {
-    return this.authService.singIN(payload.email, payload.password);
+  async signIn(@Body() payload: Record<string, any>) {
+    // return this.authService.singIN(payload.email, payload.password);
+      try {
+        return await this.authService.singIN(payload.email, payload.password);
+      } catch (error) {
+        console.error('Login Error:', error.message); // Log the error
+        throw new HttpException('Invalid credentials', HttpStatus.UNAUTHORIZED);
+      }
+
   }
   @ApiOperation({
     summary: 'protected Route',

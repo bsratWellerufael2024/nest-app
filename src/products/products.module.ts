@@ -4,9 +4,10 @@ import { ProductMiddleware } from 'src/product.middleware';
 import { ProductsService } from './products.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Products } from './product.entity';
+import { UnitCoversion } from 'src/unitconversion/unit.entity';
 
 @Module({
-  imports:[TypeOrmModule.forFeature([Products])],
+  imports:[TypeOrmModule.forFeature([Products,UnitCoversion])],
   controllers: [ProductsController],
   providers: [ProductsService],
   exports:[ProductsService]

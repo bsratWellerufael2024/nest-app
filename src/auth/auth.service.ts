@@ -10,12 +10,12 @@ export class AuthService {
          const user=await this.userService.findByEmail(email)
          
          if(!user){
-          throw new  UnauthorizedException
+          throw new  UnauthorizedException('no user registered using this email')
          }
          
          const ValidPass = await bcrypt.compare(pass, user.password);
          if(!ValidPass){
-            throw new UnauthorizedException
+            throw new UnauthorizedException('invalid password')
          }
         
       const payload={sub:user.id,email:user.email,role:user.role}

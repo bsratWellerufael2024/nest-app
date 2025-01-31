@@ -10,7 +10,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './users/user.entity';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Products } from './products/product.entity';
-
+import { UnitconversionModule } from './unitconversion/unitconversion.module';
+import { UnitCoversion } from './unitconversion/unit.entity';
 @Module({
   imports: [
     UsersModule,
@@ -30,10 +31,11 @@ import { Products } from './products/product.entity';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [User,Products],
+        entities: [User, Products, UnitCoversion],
         synchronize: true,
       }),
     }),
+    UnitconversionModule,
   ],
   controllers: [AppController],
   providers: [AppService],

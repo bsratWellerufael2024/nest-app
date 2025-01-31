@@ -1,26 +1,36 @@
 import { isNumber, IsNumber, IsString, Length } from "class-validator"
 
-export class ProductDto{
-    @IsNumber()
-    productId:number
+export class ProductDto {
+  @IsNumber()
+  productId: number;
 
-    @IsString()
-    @Length(4)
-    productName:string
+  @IsString()
+  @Length(4)
+  productName: string;
 
-    @IsString()
-    specification:string
+  @IsString()
+  specification: string;
 
-    @IsString()
-    unit:string
+  @IsString()
+  baseUnit: string;
 
-    @IsNumber()
-    qty:number
+  @IsNumber()
+  openingQty: number;
 
-    catagory:string
+  @IsNumber()
+  inComingQty: number;
 
-    @IsNumber()
-    price:number
-    
+  @IsNumber()
+  outGoingQty: number;
 
+  @IsNumber()
+  closingQty: number;
+
+  catagory: string;
+
+  @IsNumber()
+  costPerUnit: number;
+
+  @IsNumber()
+  sellingPricePerUnit: number;
 }
