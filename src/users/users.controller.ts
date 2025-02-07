@@ -5,6 +5,7 @@ import { User } from './user.entity';
 import { Roles } from 'src/auth/roles.decorator';
 import { Role } from 'src/auth/role.enum';
 import { AuthGuard } from 'src/auth/auth.guard';
+import { ApiResponse } from 'src/common/dto/api-response.dto';
 
 @Controller('users')
 export class UsersController {
@@ -13,12 +14,13 @@ export class UsersController {
   @UseGuards(AuthGuard)
   @Roles(Role.User,Role.Admin)
   @Get()
-  findAll() {
+  findAll():Promise<ApiResponse<any>>
+   {
     return this.userService.findAll();
   }
 
   @Post()
-  createUser(@Body() createUserDto: CreateUserDTO): Promise<User> {
+  createUser(@Body() createUserDto: CreateUserDTO): Promise<ApiResponse<any>> {
     return this.userService.createUser(
       createUserDto.id,
       createUserDto.email,
@@ -28,17 +30,14 @@ export class UsersController {
     );
   }
   @Get(':id')
-  findById(@Param('id') id: number): Promise<User> | null {
+  findById(@Param('id') id: number): Promise<ApiResponse<any>> | null {
     return this.userService.findById(+id);
   }
   
    @Roles(Role.Admin)
    @UseGuards(AuthGuard)
    @Delete(':id')
-   removeUser(@Param('id') id: number) {
-    this.userService.removeUser(+id);
-    return {
-      message: 'User Deleted',
-    };
+   removeUser(@Param('id') id: number):Promise<ApiResponse<any>> {
+               return this.userService.removeUser(+id);
   }
 }

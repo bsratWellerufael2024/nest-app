@@ -1,21 +1,24 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, PrimaryGeneratedColumn ,OneToMany} from "typeorm";
+import { Products } from "src/products/product.entity";
+@Entity('units')
+export class UnitCoversion {
+  
+  @PrimaryGeneratedColumn()
+  id: number;
 
-@Entity('units') 
-export class UnitCoversion{
- @PrimaryGeneratedColumn()
-     id:number
+  @Column({ unique: true }) // Ensures baseUnit is unique
+  baseUnit: string;
 
   @Column()
-  baseUnit:string
+  containerUnit: string;
 
-  @Column()
-  containerUnit:string
+  @Column('float', { default: 1 }) // Ensures conversion rate is stored correctly
+  conversionRate: number;
 
-  @Column('float',{default:1})
-  conversionRate:number
+  @Column({ default: false })
+  isUserDefined: boolean;
 
-  @Column({default:false})
-
-   isUserDefined:boolean
+  @OneToMany(() => Products, (product) => product.unitConversion)
+  products: Products[];
 }
 

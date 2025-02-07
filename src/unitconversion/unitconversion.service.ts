@@ -1,12 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Products } from 'src/products/product.entity';
 import { Repository } from 'typeorm';
 import { UnitCoversion } from './unit.entity';
 
 
 @Injectable()
-export class UnitconversionService {
+export class UnitconversionService implements OnModuleInit {
   constructor(
     @InjectRepository(UnitCoversion)
     private unitConversionRepository: Repository<UnitCoversion>,

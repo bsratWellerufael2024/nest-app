@@ -8,6 +8,6 @@ import { UnitCoversion } from './unit.entity';
   imports:[TypeOrmModule.forFeature([UnitCoversion])],
   providers: [UnitconversionService],
   controllers: [UnitconversionController],
-  exports:[UnitconversionService]
+  exports:[TypeOrmModule]
 })
 export class UnitconversionModule {}

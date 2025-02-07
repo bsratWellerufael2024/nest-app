@@ -1,5 +1,5 @@
 import { isNumber, IsNumber, IsString, Length } from "class-validator"
-
+import { Category } from "./category.entity";
 export class ProductDto {
   @IsNumber()
   productId: number;
@@ -26,7 +26,9 @@ export class ProductDto {
   @IsNumber()
   closingQty: number;
 
-  catagory: string;
+  
+  @IsNumber()
+  categoryId:number
 
   @IsNumber()
   costPerUnit: number;

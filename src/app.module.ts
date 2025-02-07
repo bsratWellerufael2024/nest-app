@@ -1,4 +1,4 @@
-import {Get, MiddlewareConsumer, Module, NestModule, RequestMethod  } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule, RequestMethod  } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
@@ -12,6 +12,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Products } from './products/product.entity';
 import { UnitconversionModule } from './unitconversion/unitconversion.module';
 import { UnitCoversion } from './unitconversion/unit.entity';
+import { Category } from './products/category.entity';
 @Module({
   imports: [
     UsersModule,
@@ -31,8 +32,16 @@ import { UnitCoversion } from './unitconversion/unit.entity';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [User, Products, UnitCoversion],
+        entities: [User, Products, UnitCoversion,Category],
         synchronize: true,
+        logging: false,
+        //migrations: ['src/migrations/*.ts'],
+        migrations: [__dirname + '/../migrations/*.{ts,js}'],
+        subscribers: [],
+        migrationsTableName: 'migrations',
+        cli: {
+          migrationsDir: 'src/migrations',
+        },
       }),
     }),
     UnitconversionModule,
