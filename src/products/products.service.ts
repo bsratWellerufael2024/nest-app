@@ -1,14 +1,12 @@
-import { BadRequestException, HttpException, HttpStatus, Injectable, NotFoundException, Res } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, NotFoundException, Res } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Products } from './product.entity';
 import { UnitCoversion } from 'src/unitconversion/unit.entity';
 import { Category } from './category.entity';
 import { ApiResponse } from 'src/common/dto/api-response.dto';
-import { CatagoryDto } from './category.dto';
-import { ProductDto } from './product.dto';
+import { ProductTransaction } from './product.transaction.entity';
 import { group } from 'console';
-
 
 @Injectable()
 export class ProductsService {
@@ -20,12 +18,13 @@ export class ProductsService {
     private UnitConversion: Repository<UnitCoversion>,
 
     @InjectRepository(Category)
-     private categoryRepository:Repository<Category>
+     private categoryRepository:Repository<Category>,
+    @InjectRepository(ProductTransaction)
+     private productTrasactionRepo:Repository<ProductTransaction>
   ) {}
 
 async createProduct( 
-  productName: string,
-   costPerUnit: number,
+   productName: string,
    specification: string,
    baseUnit: string,
    categoryId:number,
@@ -38,7 +37,6 @@ async createProduct(
            }
           const newProduct = await this.repository.create({ 
             productName, 
-            costPerUnit,
             specification,
             baseUnit,
             category,openingQty,
@@ -59,20 +57,20 @@ async createProduct(
 
 }
 
-  async newIncoming(productId: number,qty:number,cost:number,productDto?:ProductDto):Promise<ApiResponse<any>> {
-      const {inComingQty,costPerUnit}=productDto
+  async newIncoming(productId: number,qty:number,unit_cost:number,user:any):Promise<ApiResponse<any>> {
+      
     try{
-         const product = await this.repository.findOneBy({ productId });
-         if (!product) {
-           throw new NotFoundException(`Product With Id ${productId} Not Found`)
-         }
-         if([inComingQty,costPerUnit].some((value)=>isNaN(value))){
-             throw new BadRequestException('One or more values invalid')
-         }
-         product.inComingQty += qty;
-         product.costPerUnit += cost;
-         product.closingQty = product.openingQty + product.inComingQty - product.outGoingQty;
-         this.repository.save(product);
+         const transaction=this.productTrasactionRepo.create({
+           product:{productId},
+           type:'purchase', 
+           quantity:qty,
+           unit_cost:unit_cost,
+           total_cost:unit_cost *qty,
+           remaining_quantity:qty,
+           user_email:user.email,
+           date:new Date()
+         })
+         this.productTrasactionRepo.save(transaction)
          return new ApiResponse(true, `NewIncoming Product Added Successfuly`);
      }
      catch(error){
@@ -86,148 +84,103 @@ async createProduct(
      }
   }
   async newOutGoing(productId: number, qty: number, price: number):Promise<ApiResponse<any>> {
-      try{
-         const product = await this.repository.findOneBy({ productId });
-         if (!product) {
-           throw new NotFoundException(`Product with productId ${productId}not found`)
-         }
-         if (product.closingQty < qty)
-            throw new NotFoundException('Not enough stock');
-            product.outGoingQty += qty;
-            product.sellingPricePerUnit += price;
-            product.closingQty = product.openingQty + product.inComingQty - product.outGoingQty;
-            await this.repository.save(product);
-            return new ApiResponse(true,`Product ${product.productName} outGoing successfuly`)
-      }
-      catch(error){
-              throw new HttpException(new ApiResponse(
-                  false,
-                  `Error ${productId} while outGoing`,
-                  undefined,
-                  {code:500,detail:error.message}),
-                  HttpStatus.INTERNAL_SERVER_ERROR
-                )
-      }
+         try{
+               const transactions = await this.productTrasactionRepo.find({
+               where: { product: { productId }, type: 'purchase' },
+               order: { date: 'ASC' },
+             });
+             let remainingqtyToSell = qty;
+             let totalCOGS = 0;
+             for (const transaction of transactions) {
+               if (transaction.remaining_quantity > 0) {
+                 const qtyToDeduct = Math.min(
+                   transaction.remaining_quantity,
+                   remainingqtyToSell,
+                 );
+                 totalCOGS += transaction.unit_cost * qtyToDeduct;
+                 transaction.remaining_quantity -= qtyToDeduct;
+                 console.log(totalCOGS);
+                 remainingqtyToSell -= qtyToDeduct;
+                 await this.productTrasactionRepo.save(transactions);
+                 if (remainingqtyToSell === 0) break;
+               }
+             }
+             if (remainingqtyToSell > 0) {
+               throw new Error('Not enough stock available');
+             }
+             const saleTransaction = this.productTrasactionRepo.create({
+               product: { productId },
+               type: 'sale',
+               quantity: qty,
+               unit_price: price,
+               total_price: qty * price,
+               total_cost: totalCOGS,
+               date: new Date(),
+             });
+             await this.productTrasactionRepo.save(saleTransaction);
+             return new ApiResponse(
+               true,
+               `Product outGoing successfuly`,
+             );
+    }
+    catch(error){
+        throw new HttpException(new ApiResponse(false,'Error selling product',undefined,{code:500,detail:error.message}),
+        HttpStatus.INTERNAL_SERVER_ERROR)
+    }
   }
   async getInventorySummary(page:number,limit:number,startDate?:string,endDate?:string,sortBy?:string ) {
    
-  //   const groupedUsers={}
-  //   const users = [
-  //     { name: 'bsrat', category: 'user', age: 23 },
-  //     { name: 'robel', category: 'admin', age: 12 },
-  //     { name: 'alex', category: 'user', age: 12 },
-  //   ];
-    
-  //  users.map((user)=>{
-  //   const categoryName=user.category
-  //   if(!groupedUsers[categoryName]){
-  //     groupedUsers[categoryName]={
-  //           role:categoryName,
-  //           users:[]
-  //     }
-  //   }
-  //  const userList={
-  //       name:user.name,
-  //       age:user.age
-  //  }
-  //   groupedUsers[categoryName].users.push(userList)
-  // })
-  //   try{
-  //       const data=Object.values(groupedUsers)
-  //        return new ApiResponse(true,"Summary Fetched Successfuly",data)
-  //      }
-  //   catch(error){
-  //     throw new HttpException(new ApiResponse(false,"Error Feching Data",undefined,{code:500,detail:error.message}),
-  //         HttpStatus.INTERNAL_SERVER_ERROR
-  //   )
-  //   }
-            let totalExpenditue = 0;
-            let totalRevenue = 0;
-            let totalProfit = 0;
            const query = this.repository
              .createQueryBuilder('product')
              .leftJoinAndSelect('product.unitConversion', 'unitConversion')
              .leftJoinAndSelect('product.category','category')
-          
-          //   if(startDate && endDate){
-          //     query.where('product.createdAt BETWEEN:startDate AND :endDate',{startDate,endDate})
-          //    }
-
+             .leftJoinAndSelect('product.transactions','transactions')
+            if(startDate && endDate){
+              query.where('product.createdAt BETWEEN:startDate AND :endDate',{startDate,endDate})
+             }
           query.skip((page-1) * limit).take(limit)
           const products=await query.getMany()
           const totalCount=await query.getCount()
           const groupedProducts={}
-
-          const processedProducts=products.map((product)=>{
+               products.forEach((product)=>{
                 const conversionRate= product.unitConversion?.conversionRate||1
                 const containerUnit=product.unitConversion?.containerUnit||product.baseUnit
-                const expediture=product.inComingQty * product.costPerUnit
-                const revenue=product.outGoingQty * product.sellingPricePerUnit
-                const profit=revenue-expediture
-                totalExpenditue+=expediture,
-                totalRevenue+=revenue,
-                totalProfit+=profit
-
                   const categoryName=product.category.name
-                   if(!groupedProducts[categoryName]){
+                  if(!groupedProducts[categoryName]){
                           groupedProducts[categoryName]={
                           group:categoryName,
                           subTotalOpeningQty:0,
                           subTotalIncomingQty:0,
                           subTotalOutGoingQty:0 ,
                           subTotalClosingQty:0,
-                          subTotalCost:0,
-                          subTotalPrice:0,
-                          subTotalProfit:0,
                           products:[]
                          }     
                    }
                  groupedProducts[categoryName].subTotalOpeningQty+=product.openingQty
-                 groupedProducts[categoryName].subTotalIncomingQty+=product.inComingQty
-                 groupedProducts[categoryName].subTotalOutGoingQty+=product.outGoingQty
-                 groupedProducts[categoryName].subTotalClosingQty+=product.closingQty
-                 groupedProducts[categoryName].subTotalCost+=product.costPerUnit
-                 groupedProducts[categoryName].subTotalPrice+product.sellingPricePerUnit
-                 const productsList = {
-                   productName: product.productName,
-                   baseUnit: product.baseUnit,
-                   openingQty: product.openingQty,
-                   openingQtyPerContainer: `${Math.round((product.openingQty/conversionRate)*10)/10} ${containerUnit}`,
-                   incomingQty: product.inComingQty,
-                   incomingQtyPerContainer: `${product.inComingQty / conversionRate} ${containerUnit}`,
-                   outGoingQty: product.outGoingQty,
-                   outGoingQtyPerContainer: `${product.outGoingQty / conversionRate} ${containerUnit}`,
-                   closingQty: product.closingQty,
-                   closingQtyPerContainer: `${product.closingQty / conversionRate} ${containerUnit}`,
-                   costPerUnit: product.costPerUnit,
-                   price: product.sellingPricePerUnit,
-                 };
+                 const purchasedQty=product.transactions.filter(t=>t.type==='purchase')
+                 const soldQty=product.transactions.filter(t=>t.type==='sale')
+                 const subTotalIncomingQty=purchasedQty.reduce((sum,tx)=>sum+(tx.quantity)||0,0)
+                 const subTotalOutGoingQty=soldQty.reduce((sum,tx)=>sum+(tx.quantity)||0,0)
+                groupedProducts[categoryName].subTotalIncomingQty+=subTotalIncomingQty  
+                groupedProducts[categoryName].subTotalOutGoingQty+=subTotalOutGoingQty     
+                groupedProducts[categoryName].subTotalClosingQty =
+                  groupedProducts[categoryName].subTotalClosingQty =
+                    groupedProducts[categoryName].subTotalOpeningQty +
+                    groupedProducts[categoryName].subTotalIncomingQty -
+                    groupedProducts[categoryName].subTotalOutGoingQty;
+                const productsList = {
+                  productName: product.productName,
+                  baseUnit: product.baseUnit,
+                  openingQty: product.openingQty,
+                  openingQtyPerContainer: `${Math.round((product.openingQty/conversionRate)*10)/10} ${containerUnit}`,
+                };
 
                 groupedProducts[categoryName].products.push(productsList)
-                // return {
-                //   inComingQtyPerContainer: `${product.inComingQty/conversionRate} ${containerUnit}`,
-                //   closingQtyPerContainer: `${product.closingQty / conversionRate} ${containerUnit}`,
-                //   };
+              
           })
-            // const data=Object.values(groupedProducts)
-           return new ApiResponse(true,'Data Fetched Successfuly',groupedProducts)
-
-          // if(sortBy==="highestProfit"){
-          //   processedProducts.sort((a,b)=>b.profit-a.profit)
-          // }
-          // if(sortBy==='mostSold'){
-          //   processedProducts.sort((a,b)=>b.outGoingQty-a.outGoingQty)
-          // }
-
-    // return {
-      // processedProducts:processedProducts
-      // totalExpenditue: totalExpenditue,
-      // totalRevenue: totalRevenue,
-      // profit: totalProfit,
-      // currentPage:page,
-      // totalPages:Math.ceil(totalCount/limit),
-      // totalItems:totalCount
-    // };
+          const groupedProductsArray=Object.values(groupedProducts)
+           return new ApiResponse(true,'Data Fetched Successfuly',groupedProductsArray)
+    
   }
 
   async updateProduct(productid: number, updatedData: Partial<Products>) {
@@ -237,21 +190,77 @@ async createProduct(
     }
     return result;
   }
-  async getOneProduct(productId: number) {
-    return this.repository.findOneBy({ productId });
+
+  async productDetail(productId: number):Promise<ApiResponse<any>> {
+   try{
+           const transactions = await this.productTrasactionRepo.find({
+           where: { product: {productId:productId} },
+           order:{date:'DESC'},
+           select:['quantity','type','unit_cost','total_cost','unit_price','total_price','remaining_quantity','date','user_email']
+         });
+         const product=await this.repository.findOneBy({productId})
+         const products=await this.repository.find({where:{productId:productId}})
+         console.log(products);
+         const openingQty=product.openingQty;
+         const purchaseTransaction=transactions.filter(tx=>tx.type==='purchase')
+         const sellTransaction=transactions.filter(tx=>tx.type=='sale')
+         const incomingQty=purchaseTransaction.reduce((sum,tx)=>sum+(tx.quantity ||0),0)
+         const outGoingQty=sellTransaction.reduce((sum,tx)=>sum+(tx.quantity ||0),0)
+         const closingQty=openingQty+incomingQty-outGoingQty
+       
+         console.log(incomingQty,outGoingQty,closingQty);
+         return new ApiResponse(true, 'Product Detail Succssfuly Fetched', {
+           incomingQty,
+           outGoingQty,
+           closingQty,
+           productDetail: products.map((product) => ({
+             productName: product.productName,
+             unit: product.baseUnit,
+             specfication: product.specification,
+             containerUnit: product.unitConversion.containerUnit,
+             rate: product.unitConversion.conversionRate,
+             incomingQtyPerCarton: `${Math.round((incomingQty / product.unitConversion.conversionRate) * 10) / 10} ${product.unitConversion.containerUnit}`,
+             outGoingQtyPerCarton: `${Math.round((outGoingQty / product.unitConversion.conversionRate) * 10) / 10} ${product.unitConversion.containerUnit}`,
+             closingQtyPerCarton: `${Math.round((closingQty / product.unitConversion.conversionRate) * 10) / 10} ${product.unitConversion.containerUnit}`,
+             openingQtyPerCarton: `${Math.round((openingQty / product.unitConversion.conversionRate) * 10) / 10} ${product.unitConversion.containerUnit}`,
+             category: product.category.name,
+             openingQty: product.openingQty,
+             date: product.createdAt,
+             recent_transactions:  transactions.map((t) => ({
+               type: t.type,
+               quantity: t.quantity,
+               ...(t.type==='purchase' &&{
+                purchasedBy:t.user_email
+               }),
+               ...(t.type==='sale' && {
+                SoldBy:t.user_email
+               }),
+               unit_cost:t.type==='purchase'? t.unit_cost:undefined,
+               total_cost: t.type === 'purchase' ? t.total_cost : undefined,
+               unit_price: t.type === 'sale' ? t.unit_price : undefined,
+               total_price: t.type === 'sale' ? t.total_price : undefined,
+               remaing_quantity:t.type==='purchase'?t.remaining_quantity:undefined,
+               date: t.date? new Date(t.date).toISOString().split('T')[0]:null
+             })),
+           })),
+         });
+   }
+   catch(error){
+        throw new HttpException(new ApiResponse(false,'Error Fetching Data',undefined,{code:500,detail:error.message}),
+        HttpStatus.INTERNAL_SERVER_ERROR
+      )
+   }
+    
   }
 
-//  async addCatagory(id:number,name:string,description?:string){
-//      const newCatagory= await this.categoryRepository.create({id,name,description})
-//           return this.categoryRepository.save(newCatagory)
-//  }
+ async addCatagory(id:number,name:string,description?:string){
+     const newCatagory= await this.categoryRepository.create({id,name,description})
+          return this.categoryRepository.save(newCatagory)
+ }
 
-// async getCatagory(){
-//       const getCatagory=await this.repository.find()
-//       getCatagory.map((product)=>{
-//          return {catagory:product.category.id}
-//       })
-// }
+async getCatagory(){
+    return await this.categoryRepository.find()   
+}
   async removeProduct(productId: number): Promise<void> {
     await this.repository.delete({ productId });
   }

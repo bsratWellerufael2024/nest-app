@@ -1,6 +1,7 @@
 import { UnitCoversion } from "src/unitconversion/unit.entity";
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { Category } from "./category.entity";
+import { ProductTransaction } from "./product.transaction.entity";
 
 @Entity('products')
 export class Products {
@@ -16,6 +17,9 @@ export class Products {
   @Column()
   baseUnit: string;
 
+  @OneToMany(()=>ProductTransaction,(transaction)=>transaction.product)
+  transactions:ProductTransaction[]
+
   @ManyToOne(() => UnitCoversion, (unitConversion) => unitConversion.products, {
     eager: true,
     nullable: true,
@@ -26,15 +30,6 @@ export class Products {
   @Column({ default: 0 })
   openingQty: number;
 
-  @Column({ default: 0 })
-  inComingQty: number;
-
-  @Column({ default: 0 })
-  outGoingQty: number;
-
-  @Column({ default: 0 })
-  closingQty: number; 
-   
   @Column()
    categoryId:number
 
@@ -42,12 +37,6 @@ export class Products {
   @JoinColumn({name:"categoryId"}) // This correctly establishes the foreign key
   category: Category;
 
-  @Column('float', { default: 0 })
-  costPerUnit: number;
-
-  @Column('float', { default: 0 })
-  sellingPricePerUnit: number;
-
-  @CreateDateColumn({ type: 'timestamp' })
+ @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;
 }

@@ -6,9 +6,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Products } from './product.entity';
 import { UnitconversionModule } from 'src/unitconversion/unitconversion.module';
 import { Category } from './category.entity';
+import { ProductTransaction } from './product.transaction.entity';
 
 @Module({
-  imports:[TypeOrmModule.forFeature([Products,Category]),UnitconversionModule],
+  imports:[TypeOrmModule.forFeature([Products,Category,ProductTransaction]),UnitconversionModule],
   controllers: [ProductsController],
   providers: [ProductsService],
   exports:[ProductsService]

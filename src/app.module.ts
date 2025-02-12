@@ -13,6 +13,7 @@ import { Products } from './products/product.entity';
 import { UnitconversionModule } from './unitconversion/unitconversion.module';
 import { UnitCoversion } from './unitconversion/unit.entity';
 import { Category } from './products/category.entity';
+import { ProductTransaction } from './products/product.transaction.entity';
 @Module({
   imports: [
     UsersModule,
@@ -32,7 +33,7 @@ import { Category } from './products/category.entity';
         username: configService.get<string>('DB_USERNAME'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        entities: [User, Products, UnitCoversion,Category],
+        entities: [User, Products, UnitCoversion,Category,ProductTransaction],
         synchronize: true,
         logging: false,
         //migrations: ['src/migrations/*.ts'],
